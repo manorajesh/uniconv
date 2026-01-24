@@ -12,6 +12,9 @@ struct DropZoneView: View {
     @Binding var files: [FileItem]
     @State private var isTargeted = false
     @State private var isHovering = false
+    @State private var showUnsupportedAlert = false
+    @State private var unsupportedFileName = ""
+    @State private var unsupportedFileExtension = ""
     
     var body: some View {
         VStack(spacing: 16) {
