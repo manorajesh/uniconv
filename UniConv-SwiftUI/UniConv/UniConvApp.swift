@@ -2,7 +2,7 @@
 //  UniConvApp.swift
 //  UniConv
 //
-//  Created on 1/22/2026.
+//  A native macOS Tahoe application with Liquid Glass effects
 //
 
 import SwiftUI
@@ -14,31 +14,13 @@ struct UniConvApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .frame(minWidth: 500, idealWidth: 600, minHeight: 400, idealHeight: 700)
-                .onAppear {
-                    configureWindow()
-                }
+                .frame(minWidth: 520, idealWidth: 620, minHeight: 450, idealHeight: 720)
         }
-        .windowStyle(.hiddenTitleBar)
-        .windowToolbarStyle(.unified)
+        .windowStyle(.automatic)
+        .windowToolbarStyle(.unifiedCompact)
+        .defaultSize(width: 620, height: 720)
         .commands {
             CommandGroup(replacing: .newItem) { }
-        }
-    }
-    
-    private func configureWindow() {
-        if let window = NSApp.windows.first {
-            window.titlebarAppearsTransparent = true
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            window.titleVisibility = .hidden
-            
-            // Enable vibrancy
-            if let contentView = window.contentView {
-                contentView.wantsLayer = true
-                contentView.layer?.cornerRadius = 12
-                contentView.layer?.masksToBounds = true
-            }
         }
     }
 }
@@ -49,7 +31,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        // Cancel all running conversions when app quits
         ConversionManager.shared.cancelAllConversions()
     }
 }

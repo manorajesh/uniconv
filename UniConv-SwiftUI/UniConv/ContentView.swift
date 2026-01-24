@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  UniConv
 //
-//  Created on 1/22/2026.
+//  A native macOS Tahoe application with Liquid Glass effects
 //
 
 import SwiftUI
@@ -11,48 +11,41 @@ struct ContentView: View {
     @State private var files: [FileItem] = []
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Title bar spacer (for draggable area)
-            Color.clear
-                .frame(height: 28)
-            
-            // Main content
+        NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     DropZoneView(files: $files)
+                        .padding(.top, 8)
                     
                     if !files.isEmpty {
                         FileQueueView(files: $files)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
                     }
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: files.isEmpty)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .scrollContentBackground(.hidden)
+            .background(.background)
+            .navigationTitle("UniConv")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    if !files.isEmpty {
+                        Text("\(files.count) \(files.count == 1 ? "file" : "files")")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
-        .background(VisualEffectBackground(material: .underWindowBackground, blendingMode: .behindWindow))
-    }
-}
-
-// Native macOS visual effect view for liquid glass effect
-struct VisualEffectBackground: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-    
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
     }
 }
 
 #Preview {
     ContentView()
-        .frame(width: 600, height: 700)
+        .frame(width: 620, height: 720)
 }

@@ -2,7 +2,7 @@
 //  FileQueueView.swift
 //  UniConv
 //
-//  Created on 1/22/2026.
+//  A native macOS Tahoe file queue with Liquid Glass effects
 //
 
 import SwiftUI
@@ -21,62 +21,57 @@ struct FileQueueView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("\(files.count) \(files.count == 1 ? "file" : "files")")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
+            // Header with actions
+            HStack(spacing: 12) {
                 if !pendingFiles.isEmpty {
-                    Button("Convert All") {
-                        convertAll()
+                    Button(action: convertAll) {
+                        Label("Convert All", systemImage: "play.fill")
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
                 }
                 
                 if hasFinished {
-                    Button("Clear Completed") {
-                        clearCompleted()
+                    Button(action: clearCompleted) {
+                        Label("Clear Done", systemImage: "xmark.circle")
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.regular)
                 }
+                
+                Spacer()
             }
-            .padding()
-            .background(.regularMaterial)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             
             Divider()
-                .overlay(Color.white.opacity(0.1))
+                .padding(.horizontal, 16)
             
             // File list
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(files) { file in
-                        FileRowView(file: file, onRemove: {
+            LazyVStack(spacing: 8) {
+                ForEach(files) { file in
+                    FileRowView(file: file, onRemove: {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             removeFile(file)
-                        }, onRetry: {
-                            retryConversion(file)
-                        }, onCancel: {
-                            cancelConversion(file)
-                        })
-                        
-                        Divider()
-                    }
+                        }
+                    }, onRetry: {
+                        retryConversion(file)
+                    }, onCancel: {
+                        cancelConversion(file)
+                    })
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.9).combined(with: .opacity),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                    ))
                 }
             }
+            .padding(16)
         }
-        .background(.thickMaterial)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.linearGradient(
-                    colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 10, y: 5)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.background.secondary)
+        }
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
     
     private func convertAll() {
@@ -88,8 +83,10 @@ struct FileQueueView: View {
     }
     
     private func clearCompleted() {
-        files.removeAll { file in
-            file.status == .completed || file.status == .cancelled || file.status == .error
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            files.removeAll { file in
+                file.status == .completed || file.status == .cancelled || file.status == .error
+            }
         }
     }
     
@@ -118,117 +115,169 @@ struct FileRowView: View {
     let onRetry: () -> Void
     let onCancel: () -> Void
     
+    @State private var isHovering = false
+    
     var body: some View {
         HStack(spacing: 12) {
-            // File type icon
-            Image(systemName: FormatUtils.getFileTypeIcon(file.type))
-                .font(.system(size: 18))
-                .foregroundColor(.secondary)
-                .frame(width: 20)
+            // File type icon with background
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(iconBackgroundColor)
+                    .frame(width: 36, height: 36)
+                
+                Image(systemName: FormatUtils.getFileTypeIcon(file.type))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(iconColor)
+                    .symbolEffect(.pulse, isActive: file.status == .converting)
+            }
             
             // File info
             VStack(alignment: .leading, spacing: 4) {
                 Text(file.name)
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
+                    .truncationMode(.middle)
                 
-                if file.status == .converting {
-                    HStack(spacing: 8) {
-                        ProgressBarView(progress: file.progress)
-                            .frame(height: 6)
-                        
-                        Text(progressText)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                } else if file.status == .error {
-                    Text(file.error ?? "Unknown error")
-                        .font(.system(size: 11))
-                        .foregroundColor(.red)
-                        .lineLimit(1)
-                } else if file.status == .completed {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("Completed")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                } else if file.status == .cancelled {
-                    HStack(spacing: 4) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("Cancelled")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                }
+                statusView
             }
             
-            Spacer()
+            Spacer(minLength: 8)
             
-            // Format selector
+            // Format selector or status indicator
             if file.status == .pending || file.status == .error {
                 FormatSelector(file: file)
             }
             
             // Action buttons
-            HStack(spacing: 8) {
-                if file.status == .pending {
-                    Button(action: {
-                        Task {
-                            await ConversionManager.shared.startConversion(for: file)
-                        }
-                    }) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Start conversion")
-                } else if file.status == .converting {
-                    Button(action: onCancel) {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Cancel conversion")
-                } else if file.status == .error {
-                    Button(action: onRetry) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Retry conversion")
-                }
-                
-                Button(action: onRemove) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12))
-                }
-                .buttonStyle(.borderless)
-                .help("Remove")
+            actionButtons
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isHovering ? Color.secondary.opacity(0.1) : Color.clear)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.ultraThinMaterial.opacity(0.3))
-        )
-        .padding(.horizontal, 1)
+    }
+    
+    @ViewBuilder
+    private var statusView: some View {
+        switch file.status {
+        case .converting:
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: file.progress, total: 100)
+                    .progressViewStyle(.linear)
+                    .tint(Color.accentColor)
+                
+                Text(progressText)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        case .error:
+            Label(file.error ?? "Unknown error", systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.red)
+                .lineLimit(1)
+        case .completed:
+            Label("Completed", systemImage: "checkmark.circle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.green)
+        case .cancelled:
+            Label("Cancelled", systemImage: "xmark.circle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.orange)
+        case .pending:
+            Text("Ready to convert")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+    }
+    
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 4) {
+            switch file.status {
+            case .pending:
+                Button(action: {
+                    Task {
+                        await ConversionManager.shared.startConversion(for: file)
+                    }
+                }) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 22))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
+                .help("Start conversion")
+                
+            case .converting:
+                Button(action: onCancel) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 22))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+                .help("Cancel conversion")
+                
+            case .error:
+                Button(action: onRetry) {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                        .font(.system(size: 22))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
+                .help("Retry conversion")
+                
+            case .completed, .cancelled:
+                EmptyView()
+            }
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .opacity(isHovering || file.status == .completed || file.status == .cancelled || file.status == .error ? 1 : 0.5)
+            .help("Remove")
+        }
+    }
+    
+    private var iconBackgroundColor: Color {
+        switch file.type {
+        case .video: return .purple.opacity(0.15)
+        case .audio: return .pink.opacity(0.15)
+        case .image: return .blue.opacity(0.15)
+        case .unknown: return .gray.opacity(0.15)
+        }
+    }
+    
+    private var iconColor: Color {
+        switch file.type {
+        case .video: return .purple
+        case .audio: return .pink
+        case .image: return .blue
+        case .unknown: return .gray
+        }
     }
     
     private var progressText: String {
-        var parts: [String] = []
+        var parts: [String] = ["\(Int(file.progress))%"]
         
-        // Percentage
-        parts.append("\(Int(file.progress))%")
-        
-        // Speed
         if let speed = file.speed, speed > 0, speed.isFinite {
-            parts.append("\(String(format: "%.1f", speed))x speed")
+            parts.append("\(String(format: "%.1f", speed))×")
         }
         
-        // ETA
         if let eta = formatEta(file.etaSeconds) {
             parts.append(eta)
         }
@@ -237,20 +286,19 @@ struct FileRowView: View {
     }
     
     private func formatEta(_ seconds: Double?) -> String? {
-        guard let seconds = seconds, seconds > 0, seconds.isFinite else {
-            return nil
-        }
+        guard let seconds = seconds, seconds > 0, seconds.isFinite else { return nil }
         
         if seconds < 60 {
-            return "\(Int(seconds))s remaining"
+            return "\(Int(seconds))s left"
         } else if seconds < 3600 {
             let mins = Int(seconds / 60)
             let secs = Int(seconds.truncatingRemainder(dividingBy: 60))
-            return "\(mins)m \(secs)s remaining"
+            return "\(mins)m \(secs)s left"
         } else {
             let hours = Int(seconds / 3600)
             let mins = Int((seconds.truncatingRemainder(dividingBy: 3600)) / 60)
-            return "\(hours)h \(mins)m remaining"
+            return "\(hours)h \(mins)m left"
         }
     }
 }
+
