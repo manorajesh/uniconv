@@ -2,7 +2,7 @@
 //  ConversionOptionsView.swift
 //  UniConv
 //
-//  Options editor for conversion settings
+//  Options editor with Liquid Glass effects
 //
 
 import SwiftUI
@@ -13,20 +13,43 @@ struct ConversionOptionsView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                switch file.type {
-                case .video:
-                    videoOptionsSection
-                case .audio:
-                    audioOptionsSection
-                case .image:
-                    imageOptionsSection
-                case .unknown:
-                    Text("No options available for unknown file type")
-                        .foregroundStyle(.secondary)
+            ZStack {
+                // Background gradient
+                MeshGradient(
+                    width: 2,
+                    height: 2,
+                    points: [
+                        [0.0, 0.0], [1.0, 0.0],
+                        [0.0, 1.0], [1.0, 1.0]
+                    ],
+                    colors: [
+                        .purple.opacity(0.08), .blue.opacity(0.08),
+                        .pink.opacity(0.08), .cyan.opacity(0.08)
+                    ]
+                )
+                .ignoresSafeArea()
+                
+                Form {
+                    switch file.type {
+                    case .video:
+                        videoOptionsSection
+                    case .audio:
+                        audioOptionsSection
+                    case .image:
+                        imageOptionsSection
+                    case .unknown:
+                        Section {
+                            ContentUnavailableView {
+                                Label("No Options", systemImage: "slider.horizontal.3")
+                            } description: {
+                                Text("No options available for this file type")
+                            }
+                        }
+                    }
                 }
+                .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
             }
-            .formStyle(.grouped)
             .navigationTitle("Conversion Options")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -35,14 +58,29 @@ struct ConversionOptionsView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Text("Done")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.blue, .purple],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            }
                     }
+                    .buttonStyle(.plain)
                     .keyboardShortcut(.return)
                 }
             }
         }
-        .frame(width: 500, height: 450)
+        .frame(width: 520, height: 480)
     }
     
     // MARK: - Video Options

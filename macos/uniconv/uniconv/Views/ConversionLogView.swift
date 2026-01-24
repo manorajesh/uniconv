@@ -78,6 +78,7 @@ struct ConversionLogView: View {
     }
 }
 
+
 #Preview {
     ConversionLogView(file: {
         let file = FileItem(

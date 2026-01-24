@@ -2,7 +2,7 @@
 //  UniConvApp.swift
 //  UniConv
 //
-//  A native macOS Tahoe application with Liquid Glass effects
+//  A native macOS Tahoe application with bold Liquid Glass effects
 //
 
 import SwiftUI
@@ -14,11 +14,11 @@ struct UniConvApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .frame(minWidth: 520, idealWidth: 620, minHeight: 450, idealHeight: 720)
+                .frame(minWidth: 560, idealWidth: 660, minHeight: 480, idealHeight: 780)
         }
         .windowStyle(.automatic)
-        .windowToolbarStyle(.unifiedCompact)
-        .defaultSize(width: 620, height: 720)
+        .windowToolbarStyle(.unified)
+        .defaultSize(width: 660, height: 780)
         .commands {
             CommandGroup(replacing: .newItem) { }
         }
