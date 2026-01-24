@@ -13,11 +13,63 @@ class ConversionManager: ObservableObject {
     private var runningProcesses: [UUID: Process] = [:]
     private let queue = DispatchQueue(label: "com.uniconv.conversion", attributes: .concurrent)
     
-    // Paths to external tools (using Homebrew paths for macOS)
-    private let ffmpegPath = "/opt/homebrew/bin/ffmpeg"
-    private let magickPath = "/opt/homebrew/bin/magick"
+    // Dynamically discovered paths to external tools
+    private var ffmpegPath: String?
+    private var magickPath: String?
     
-    private init() {}
+    private init() {
+        // Find executables in PATH
+        ffmpegPath = findExecutable(name: "ffmpeg")
+        magickPath = findExecutable(name: "magick")
+        
+        print("Found ffmpeg at: \(ffmpegPath ?? "not found")")
+        print("Found magick at: \(magickPath ?? "not found")")
+    }
+    
+    // Find executable in common paths
+    private func findExecutable(name: String) -> String? {
+        let commonPaths = [
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            NSHomeDirectory() + "/.local/bin"
+        ]
+        
+        // Try common paths first
+        for path in commonPaths {
+            let fullPath = "\(path)/\(name)"
+            if FileManager.default.isExecutableFile(atPath: fullPath) {
+                return fullPath
+            }
+        }
+        
+        // Try using 'which' command
+        let process = Process()
+        let pipe = Pipe()
+        
+        process.launchPath = "/usr/bin/which"
+        process.arguments = [name]
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !output.isEmpty {
+                    return output
+                }
+            }
+        } catch {
+            print("Error finding \(name): \(error)")
+        }
+        
+        return nil
+    }
     
     // MARK: - Public Methods
     
@@ -87,6 +139,10 @@ class ConversionManager: ObservableObject {
     }
     
     private func convertWithFFmpeg(fileId: UUID, inputPath: String, outputPath: String, format: String, file: FileItem) async throws {
+        guard let ffmpegPath = ffmpegPath else {
+            throw ConversionError(message: "FFmpeg not found. Please install FFmpeg using: brew install ffmpeg")
+        }
+        
         // First, get the duration for progress calculation
         let duration = try await getMediaDuration(inputPath: inputPath)
         
@@ -155,6 +211,10 @@ class ConversionManager: ObservableObject {
     }
     
     private func convertWithImageMagick(fileId: UUID, inputPath: String, outputPath: String) async throws {
+        guard let magickPath = magickPath else {
+            throw ConversionError(message: "ImageMagick not found. Please install ImageMagick using: brew install imagemagick")
+        }
+        
         let process = Process()
         process.executableURL = URL(fileURLWithPath: magickPath)
         process.arguments = [
@@ -196,6 +256,10 @@ class ConversionManager: ObservableObject {
     }
     
     private func getMediaDuration(inputPath: String) async throws -> Double {
+        guard let ffmpegPath = ffmpegPath else {
+            throw ConversionError(message: "FFmpeg not found")
+        }
+        
         let process = Process()
         process.executableURL = URL(fileURLWithPath: ffmpegPath)
         process.arguments = ["-i", inputPath, "-hide_banner"]
