@@ -12,8 +12,6 @@ struct DropZoneView: View {
     @Binding var files: [FileItem]
     @State private var isTargeted = false
     @State private var isHovering = false
-    @State private var showUnsupportedAlert = false
-    @State private var unsupportedFileName = ""
     
     var body: some View {
         VStack(spacing: 16) {
@@ -76,11 +74,6 @@ struct DropZoneView: View {
         } isTargeted: { targeted in
             isTargeted = targeted
         }
-        .alert("Oops! Unsupported File", isPresented: $showUnsupportedAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Sorry, \"\(unsupportedFileName)\" isn't a file type I can convert yet. I support video, audio, and image files! 🎬🎵🖼️")
-        }
     }
     
     private func openFilePicker() {
@@ -121,12 +114,7 @@ struct DropZoneView: View {
         let fileType = FormatUtils.getFileType(fileExtension)
         let availableFormats = FormatUtils.getOutputFormats(fileType)
         
-        guard !availableFormats.isEmpty else {
-            // Show cute alert for unsupported files
-            unsupportedFileName = fileName
-            showUnsupportedAlert = true
-            return
-        }
+        guard !availableFormats.isEmpty else { return }
         
         // Avoid duplicates
         guard !files.contains(where: { $0.path == path }) else { return }

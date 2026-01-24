@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 class ConversionManager: ObservableObject {
     static let shared = ConversionManager()
@@ -513,3 +514,4 @@ class ConversionManager: ObservableObject {
 struct ConversionError: Error {
     let message: String
 }
+

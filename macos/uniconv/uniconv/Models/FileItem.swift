@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 enum FileType: String, Codable {
     case video

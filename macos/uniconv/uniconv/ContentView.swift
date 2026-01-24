@@ -53,8 +53,6 @@ struct ContentView: View {
     private func checkForRequiredTools() {
         var missing: [String] = []
         
-        let manager = ConversionManager.shared
-        
         // Check for ffmpeg
         let commonPaths = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"]
         let ffmpegExists = commonPaths.contains { FileManager.default.isExecutableFile(atPath: $0) }

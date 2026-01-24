@@ -3,43 +3,23 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		001 /* UniConvApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101 /* UniConvApp.swift */; };
-		002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102 /* ContentView.swift */; };
-		003 /* FileItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103 /* FileItem.swift */; };
-		004 /* ConversionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104 /* ConversionManager.swift */; };
-		005 /* FormatUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105 /* FormatUtils.swift */; };
-		006 /* DropZoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106 /* DropZoneView.swift */; };
-		007 /* FileQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107 /* FileQueueView.swift */; };
-		008 /* FormatSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108 /* FormatSelector.swift */; };
-		010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 110 /* Assets.xcassets */; };
-		011 /* ConversionOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112 /* ConversionOptions.swift */; };
-		012 /* ConversionOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* ConversionOptionsView.swift */; };
-		013 /* ConversionLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114 /* ConversionLogView.swift */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
-		100 /* UniConv.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UniConv.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		101 /* UniConvApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniConvApp.swift; sourceTree = "<group>"; };
-		102 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		103 /* FileItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileItem.swift; sourceTree = "<group>"; };
-		104 /* ConversionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionManager.swift; sourceTree = "<group>"; };
-		105 /* FormatUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatUtils.swift; sourceTree = "<group>"; };
-		106 /* DropZoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropZoneView.swift; sourceTree = "<group>"; };
-		107 /* FileQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileQueueView.swift; sourceTree = "<group>"; };
-		108 /* FormatSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatSelector.swift; sourceTree = "<group>"; };
-		110 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		111 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		112 /* ConversionOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionOptions.swift; sourceTree = "<group>"; };
-		113 /* ConversionOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionOptionsView.swift; sourceTree = "<group>"; };
-		114 /* ConversionLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionLogView.swift; sourceTree = "<group>"; };
+		3F8E02DF2F256ED300B177E4 /* uniconv.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = uniconv.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		3F8E02E12F256ED300B177E4 /* uniconv */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = uniconv;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
-		200 /* Frameworks */ = {
+		3F8E02DC2F256ED300B177E4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -49,161 +29,103 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		300 = {
+		3F8E02D62F256ED300B177E4 = {
 			isa = PBXGroup;
 			children = (
-				301 /* UniConv */,
-				302 /* Products */,
+				3F8E02E12F256ED300B177E4 /* uniconv */,
+				3F8E02E02F256ED300B177E4 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		301 /* UniConv */ = {
+		3F8E02E02F256ED300B177E4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				101 /* UniConvApp.swift */,
-				102 /* ContentView.swift */,
-				303 /* Models */,
-				304 /* Views */,
-				305 /* Services */,
-				306 /* Utils */,
-				110 /* Assets.xcassets */,
-				111 /* Info.plist */,
-			);
-			path = UniConv;
-			sourceTree = "<group>";
-		};
-		302 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				100 /* UniConv.app */,
+				3F8E02DF2F256ED300B177E4 /* uniconv.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		303 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				103 /* FileItem.swift */,
-				112 /* ConversionOptions.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		304 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				106 /* DropZoneView.swift */,
-				107 /* FileQueueView.swift */,
-				108 /* FormatSelector.swift */,
-				113 /* ConversionOptionsView.swift */,
-				114 /* ConversionLogView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		305 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				104 /* ConversionManager.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		306 /* Utils */ = {
-			isa = PBXGroup;
-			children = (
-				105 /* FormatUtils.swift */,
-			);
-			path = Utils;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		400 /* UniConv */ = {
+		3F8E02DE2F256ED300B177E4 /* uniconv */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 401 /* Build configuration list for PBXNativeTarget "UniConv" */;
+			buildConfigurationList = 3F8E02EA2F256ED400B177E4 /* Build configuration list for PBXNativeTarget "uniconv" */;
 			buildPhases = (
-				200 /* Frameworks */,
-				500 /* Sources */,
-				600 /* Resources */,
+				3F8E02DB2F256ED300B177E4 /* Sources */,
+				3F8E02DC2F256ED300B177E4 /* Frameworks */,
+				3F8E02DD2F256ED300B177E4 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = UniConv;
-			productName = UniConv;
-			productReference = 100 /* UniConv.app */;
+			fileSystemSynchronizedGroups = (
+				3F8E02E12F256ED300B177E4 /* uniconv */,
+			);
+			name = uniconv;
+			packageProductDependencies = (
+			);
+			productName = uniconv;
+			productReference = 3F8E02DF2F256ED300B177E4 /* uniconv.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		700 /* Project object */ = {
+		3F8E02D72F256ED300B177E4 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
-					400 = {
-						CreatedOnToolsVersion = 15.0;
+					3F8E02DE2F256ED300B177E4 = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
-			buildConfigurationList = 701 /* Build configuration list for PBXProject "UniConv" */;
-			compatibilityVersion = "Xcode 14.0";
+			buildConfigurationList = 3F8E02DA2F256ED300B177E4 /* Build configuration list for PBXProject "uniconv" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 300;
-			productRefGroup = 302 /* Products */;
+			mainGroup = 3F8E02D62F256ED300B177E4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3F8E02E02F256ED300B177E4 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				400 /* UniConv */,
+				3F8E02DE2F256ED300B177E4 /* uniconv */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		600 /* Resources */ = {
+		3F8E02DD2F256ED300B177E4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				010 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		500 /* Sources */ = {
+		3F8E02DB2F256ED300B177E4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				001 /* UniConvApp.swift in Sources */,
-				002 /* ContentView.swift in Sources */,
-				003 /* FileItem.swift in Sources */,
-				004 /* ConversionManager.swift in Sources */,
-				005 /* FormatUtils.swift in Sources */,
-				006 /* DropZoneView.swift in Sources */,
-				007 /* FileQueueView.swift in Sources */,
-				008 /* FormatSelector.swift in Sources */,
-				011 /* ConversionOptions.swift in Sources */,
-				012 /* ConversionOptionsView.swift in Sources */,
-				013 /* ConversionLogView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		800 /* Debug */ = {
+		3F8E02E82F256ED400B177E4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -237,8 +159,8 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 48Y89F7LDM;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -257,18 +179,17 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		801 /* Release */ = {
+		3F8E02E92F256ED400B177E4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -302,8 +223,8 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 48Y89F7LDM;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -316,75 +237,72 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
 		};
-		802 /* Debug */ = {
+		3F8E02EB2F256ED400B177E4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = UniConv/UniConv.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 48Y89F7LDM;
 				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = UniConv/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mano.UniConv;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mano.uniconv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
-		803 /* Release */ = {
+		3F8E02EC2F256ED400B177E4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = UniConv/UniConv.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 48Y89F7LDM;
 				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = UniConv/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mano.UniConv;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mano.uniconv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -392,25 +310,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		401 /* Build configuration list for PBXNativeTarget "UniConv" */ = {
+		3F8E02DA2F256ED300B177E4 /* Build configuration list for PBXProject "uniconv" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				802 /* Debug */,
-				803 /* Release */,
+				3F8E02E82F256ED400B177E4 /* Debug */,
+				3F8E02E92F256ED400B177E4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		701 /* Build configuration list for PBXProject "UniConv" */ = {
+		3F8E02EA2F256ED400B177E4 /* Build configuration list for PBXNativeTarget "uniconv" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				800 /* Debug */,
-				801 /* Release */,
+				3F8E02EB2F256ED400B177E4 /* Debug */,
+				3F8E02EC2F256ED400B177E4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 700 /* Project object */;
+	rootObject = 3F8E02D72F256ED300B177E4 /* Project object */;
 }
