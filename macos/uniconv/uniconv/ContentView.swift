@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  UniConv
 //
-//  A native macOS Tahoe application with bold Liquid Glass effects
+//  A native macOS Tahoe application with Liquid Glass effects
 //
 
 import SwiftUI
@@ -11,54 +11,28 @@ struct ContentView: View {
     @State private var files: [FileItem] = []
     @State private var showMissingToolsAlert = false
     @State private var missingTools: [String] = []
-    @State private var animateGradient = false
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Animated gradient background
-                MeshGradient(
-                    width: 3,
-                    height: 3,
-                    points: [
-                        [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
-                        [0.0, 0.5], [animateGradient ? 0.6 : 0.4, 0.5], [1.0, 0.5],
-                        [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
-                    ],
-                    colors: [
-                        .purple.opacity(0.15), .blue.opacity(0.1), .cyan.opacity(0.15),
-                        .pink.opacity(0.1), .clear, .blue.opacity(0.1),
-                        .orange.opacity(0.1), .purple.opacity(0.1), .pink.opacity(0.15)
-                    ]
-                )
-                .ignoresSafeArea()
-                .onAppear {
-                    withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
-                        animateGradient.toggle()
+            ScrollView {
+                VStack(spacing: 20) {
+                    DropZoneView(files: $files)
+                        .padding(.top, 8)
+                    
+                    if !files.isEmpty {
+                        FileQueueView(files: $files)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
                     }
                 }
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        DropZoneView(files: $files)
-                            .padding(.top, 12)
-                        
-                        if !files.isEmpty {
-                            FileQueueView(files: $files)
-                                .transition(
-                                    .asymmetric(
-                                        insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .center)),
-                                        removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .center))
-                                    )
-                                )
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.75, blendDuration: 0.3), value: files.isEmpty)
-                }
-                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: files.isEmpty)
             }
+            .scrollContentBackground(.hidden)
+            .background(.background)
             .navigationTitle("UniConv")
             .onAppear {
                 checkForRequiredTools()
@@ -102,5 +76,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .frame(width: 660, height: 780)
+        .frame(width: 620, height: 720)
 }

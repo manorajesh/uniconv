@@ -2,7 +2,7 @@
 //  FileQueueView.swift
 //  UniConv
 //
-//  A native macOS Tahoe file queue with bold Liquid Glass effects
+//  A native macOS Tahoe file queue with Liquid Glass effects
 //
 
 import SwiftUI
@@ -10,6 +10,7 @@ import SwiftUI
 struct FileQueueView: View {
     @Binding var files: [FileItem]
     @StateObject private var conversionManager = ConversionManager.shared
+    @Namespace private var headerNamespace
     
     private var pendingFiles: [FileItem] {
         files.filter { $0.status == .pending }
@@ -21,50 +22,47 @@ struct FileQueueView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with liquid glass action buttons
-            HStack(spacing: 16) {
-                LiquidSplitButton(
-                    showConvertAll: !pendingFiles.isEmpty,
-                    showClearDone: hasFinished,
-                    onConvertAll: convertAll,
-                    onClearDone: clearCompleted
-                )
-                
-                Spacer()
-                
-                // File count badge
-                Text("\(files.count) file\(files.count == 1 ? "" : "s")")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background {
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+            // Header with actions - using GlassEffectContainer for morph transitions
+            GlassEffectContainer(spacing: 12) {
+                HStack(spacing: 12) {
+                    if !pendingFiles.isEmpty {
+                        Button(action: convertAll) {
+                            Label("Convert All", systemImage: "play.fill")
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .glassEffectID("convertAll", in: headerNamespace)
                     }
-                    .glassEffect(.regular, in: .capsule)
+                    
+                    if hasFinished {
+                        Button(action: clearCompleted) {
+                            Label("Clear Done", systemImage: "xmark.circle")
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .glassEffectID("clearDone", in: headerNamespace)
+                    }
+                    
+                    Spacer()
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: pendingFiles.isEmpty)
+            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: hasFinished)
             
-            // Divider with gradient
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, .white.opacity(0.2), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
-                .padding(.horizontal, 20)
+            Divider()
+                .padding(.horizontal, 16)
             
             // File list
-            LazyVStack(spacing: 12) {
+            LazyVStack(spacing: 8) {
                 ForEach(files) { file in
                     FileRowView(file: file, onRemove: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             removeFile(file)
                         }
                     }, onRetry: {
@@ -73,31 +71,18 @@ struct FileQueueView: View {
                         cancelConversion(file)
                     })
                     .transition(.asymmetric(
-                        insertion: .scale(scale: 0.92).combined(with: .opacity).combined(with: .blur(radius: 8)),
-                        removal: .scale(scale: 0.92).combined(with: .opacity).combined(with: .blur(radius: 8))
+                        insertion: .scale(scale: 0.9).combined(with: .opacity),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
                     ))
                 }
             }
-            .padding(20)
+            .padding(16)
         }
         .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.background.secondary)
         }
-        .glassEffect(.regular, in: .rect(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
     
     private func convertAll() {
@@ -109,7 +94,7 @@ struct FileQueueView: View {
     }
     
     private func clearCompleted() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             files.removeAll { file in
                 file.status == .completed || file.status == .cancelled || file.status == .error
             }
@@ -135,151 +120,6 @@ struct FileQueueView: View {
     }
 }
 
-// MARK: - Liquid Split Button (splits from one into two with liquid animation)
-
-struct LiquidSplitButton: View {
-    let showConvertAll: Bool
-    let showClearDone: Bool
-    let onConvertAll: () -> Void
-    let onClearDone: () -> Void
-    
-    @State private var convertHovering = false
-    @State private var clearHovering = false
-    @State private var convertPressed = false
-    @State private var clearPressed = false
-    
-    private var showBoth: Bool {
-        showConvertAll && showClearDone
-    }
-    
-    var body: some View {
-        HStack(spacing: showBoth ? 12 : 0) {
-            // Convert All Button
-            if showConvertAll {
-                actionButton(
-                    title: "Convert All",
-                    icon: "play.fill",
-                    gradient: [.blue, .purple],
-                    isHovering: $convertHovering,
-                    isPressed: $convertPressed,
-                    action: onConvertAll
-                )
-                .transition(.asymmetric(
-                    insertion: .scale(scale: 0.5, anchor: showClearDone ? .trailing : .center)
-                        .combined(with: .opacity)
-                        .combined(with: .blur(radius: 10)),
-                    removal: .scale(scale: 0.5, anchor: showClearDone ? .trailing : .center)
-                        .combined(with: .opacity)
-                        .combined(with: .blur(radius: 10))
-                ))
-            }
-            
-            // Clear Done Button
-            if showClearDone {
-                actionButton(
-                    title: "Clear Done",
-                    icon: "xmark.circle.fill",
-                    gradient: [.gray, .gray.opacity(0.7)],
-                    isHovering: $clearHovering,
-                    isPressed: $clearPressed,
-                    action: onClearDone
-                )
-                .transition(.asymmetric(
-                    insertion: .scale(scale: 0.5, anchor: showConvertAll ? .leading : .center)
-                        .combined(with: .opacity)
-                        .combined(with: .blur(radius: 10)),
-                    removal: .scale(scale: 0.5, anchor: showConvertAll ? .leading : .center)
-                        .combined(with: .opacity)
-                        .combined(with: .blur(radius: 10))
-                ))
-            }
-        }
-        .animation(.spring(response: 0.5, dampingFraction: 0.7, blendDuration: 0.3), value: showConvertAll)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7, blendDuration: 0.3), value: showClearDone)
-    }
-    
-    @ViewBuilder
-    private func actionButton(
-        title: String,
-        icon: String,
-        gradient: [Color],
-        isHovering: Binding<Bool>,
-        isPressed: Binding<Bool>,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                isPressed.wrappedValue = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed.wrappedValue = false
-                }
-            }
-            action()
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                Text(title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background {
-                ZStack {
-                    // Glow effect
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: gradient.map { $0.opacity(0.6) },
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .blur(radius: isHovering.wrappedValue ? 15 : 8)
-                        .offset(y: 4)
-                    
-                    // Main button
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: gradient,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    // Glass overlay
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.white.opacity(0.25), .clear],
-                                startPoint: .top,
-                                endPoint: .center
-                            )
-                        )
-                    
-                    // Border
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(.white.opacity(0.3), lineWidth: 1)
-                }
-            }
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .scaleEffect(isPressed.wrappedValue ? 0.92 : (isHovering.wrappedValue ? 1.03 : 1.0))
-        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: isHovering.wrappedValue)
-        .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isPressed.wrappedValue)
-        .onHover { hovering in
-            isHovering.wrappedValue = hovering
-        }
-    }
-}
-
-// MARK: - File Row View
-
 struct FileRowView: View {
     @ObservedObject var file: FileItem
     let onRemove: () -> Void
@@ -289,30 +129,26 @@ struct FileRowView: View {
     @State private var isHovering = false
     @State private var showOptionsSheet = false
     @State private var showLogSheet = false
+    @Namespace private var actionNamespace
     
     var body: some View {
-        HStack(spacing: 14) {
-            // File type icon with glass effect
+        HStack(spacing: 12) {
+            // File type icon with background
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(iconGradient)
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(.white.opacity(0.3), lineWidth: 1)
-                    }
-                    .shadow(color: iconColor.opacity(0.3), radius: 8, x: 0, y: 4)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(iconBackgroundColor)
+                    .frame(width: 36, height: 36)
                 
                 Image(systemName: FormatUtils.getFileTypeIcon(file.type))
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(iconColor)
                     .symbolEffect(.pulse, isActive: file.status == .converting)
             }
             
             // File info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(file.name)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 
@@ -325,41 +161,31 @@ struct FileRowView: View {
             if file.status == .pending || file.status == .error {
                 FormatSelector(file: file)
                 
-                // Options button with glass effect
-                GlassIconButton(icon: "gearshape.fill", color: .gray) {
+                // Options button
+                Button(action: {
                     showOptionsSheet = true
+                }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain)
                 .help("Conversion options")
             }
             
             // Action buttons
             actionButtons
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial.opacity(isHovering ? 1 : 0.5))
-                
-                if isHovering {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                }
-            }
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isHovering ? Color.secondary.opacity(0.1) : Color.clear)
         }
-        .contentShape(RoundedRectangle(cornerRadius: 16))
-        .scaleEffect(isHovering ? 1.01 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withAnimation(.easeInOut(duration: 0.15)) {
                 isHovering = hovering
             }
         }
@@ -375,107 +201,146 @@ struct FileRowView: View {
     private var statusView: some View {
         switch file.status {
         case .converting:
-            VStack(alignment: .leading, spacing: 6) {
-                // Custom glass progress bar
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.quaternary)
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: geometry.size.width * (file.progress / 100))
-                            .animation(.spring(response: 0.3), value: file.progress)
-                    }
-                }
-                .frame(height: 6)
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: file.progress, total: 100)
+                    .progressViewStyle(.linear)
+                    .tint(Color.accentColor)
                 
                 Text(progressText)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
         case .error:
             Label(file.error ?? "Unknown error", systemImage: "exclamationmark.triangle.fill")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 11))
                 .foregroundStyle(.red)
                 .lineLimit(1)
         case .completed:
             Label("Completed", systemImage: "checkmark.circle.fill")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 11))
                 .foregroundStyle(.green)
         case .cancelled:
             Label("Cancelled", systemImage: "xmark.circle.fill")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 11))
                 .foregroundStyle(.orange)
         case .pending:
             Text("Ready to convert")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }
     }
     
     @ViewBuilder
     private var actionButtons: some View {
-        HStack(spacing: 8) {
-            switch file.status {
-            case .pending:
-                GlassIconButton(icon: "play.fill", color: .blue, size: .large) {
-                    Task {
-                        await ConversionManager.shared.startConversion(for: file)
+        // GlassEffectContainer enables morphing between button states
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                // Primary action button - morphs between play/stop/retry
+                switch file.status {
+                case .pending:
+                    Button(action: {
+                        Task {
+                            await ConversionManager.shared.startConversion(for: file)
+                        }
+                    }) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
                     }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(.accentColor).interactive(), in: .circle)
+                    .glassEffectID("primaryAction", in: actionNamespace)
+                    .help("Start conversion")
+                    
+                case .converting:
+                    Button(action: {
+                        onCancel()
+                    }) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.orange)
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(.orange).interactive(), in: .circle)
+                    .glassEffectID("primaryAction", in: actionNamespace)
+                    .help("Cancel conversion")
+                    
+                case .error:
+                    Button(action: {
+                        onRetry()
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(.accentColor).interactive(), in: .circle)
+                    .glassEffectID("primaryAction", in: actionNamespace)
+                    .help("Retry conversion")
+                    
+                case .completed, .cancelled:
+                    EmptyView()
                 }
-                .help("Start conversion")
                 
-            case .converting:
-                GlassIconButton(icon: "stop.fill", color: .orange, size: .large) {
-                    onCancel()
+                // Log viewer button - morphs in when available
+                if file.status == .converting || file.status == .error || file.status == .completed {
+                    Button(action: {
+                        showLogSheet = true
+                    }) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .glassEffectID("logButton", in: actionNamespace)
+                    .help("View conversion log")
                 }
-                .help("Cancel conversion")
                 
-            case .error:
-                GlassIconButton(icon: "arrow.clockwise", color: .blue, size: .large) {
-                    onRetry()
+                // Reveal in Finder button - show for completed files
+                if file.status == .completed, let outputPath = file.outputPath {
+                    Button(action: {
+                        revealInFinder(path: outputPath)
+                    }) {
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.green)
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(.green).interactive(), in: .circle)
+                    .glassEffectID("revealButton", in: actionNamespace)
+                    .help("Show in Finder")
                 }
-                .help("Retry conversion")
                 
-            case .completed, .cancelled:
-                EmptyView()
-            }
-            
-            // Log viewer button
-            if file.status == .converting || file.status == .error || file.status == .completed {
-                GlassIconButton(icon: "doc.text.fill", color: .gray) {
-                    showLogSheet = true
+                // Remove button - always present, morphs with others
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
                 }
-                .help("View conversion log")
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .glassEffectID("removeButton", in: actionNamespace)
+                .opacity(isHovering || file.status == .completed || file.status == .cancelled || file.status == .error ? 1 : 0.5)
+                .help("Remove")
             }
-            
-            // Remove button
-            GlassIconButton(icon: "xmark", color: .gray) {
-                onRemove()
-            }
-            .opacity(isHovering || file.status == .completed || file.status == .cancelled || file.status == .error ? 1 : 0.5)
-            .help("Remove")
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: file.status)
     }
     
-    private var iconGradient: LinearGradient {
+    private var iconBackgroundColor: Color {
         switch file.type {
-        case .video:
-            return LinearGradient(colors: [.purple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .audio:
-            return LinearGradient(colors: [.pink, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .image:
-            return LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .unknown:
-            return LinearGradient(colors: [.gray, .gray.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case .video: return .purple.opacity(0.15)
+        case .audio: return .pink.opacity(0.15)
+        case .image: return .blue.opacity(0.15)
+        case .unknown: return .gray.opacity(0.15)
         }
     }
     
@@ -517,87 +382,13 @@ struct FileRowView: View {
             return "\(hours)h \(mins)m left"
         }
     }
-}
-
-// MARK: - Glass Icon Button
-
-struct GlassIconButton: View {
-    let icon: String
-    let color: Color
-    var size: ButtonSize = .regular
-    let action: () -> Void
     
-    enum ButtonSize {
-        case regular, large
-        
-        var iconSize: CGFloat {
-            switch self {
-            case .regular: return 14
-            case .large: return 16
-            }
-        }
-        
-        var padding: CGFloat {
-            switch self {
-            case .regular: return 8
-            case .large: return 10
-            }
-        }
-    }
-    
-    @State private var isHovering = false
-    @State private var isPressed = false
-    
-    var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
-                    isPressed = false
-                }
-            }
-            action()
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: size.iconSize, weight: .semibold))
-                .foregroundStyle(isHovering ? color : .secondary)
-                .padding(size.padding)
-                .background {
-                    Circle()
-                        .fill(.ultraThinMaterial.opacity(isHovering ? 1 : 0.6))
-                        .overlay {
-                            Circle()
-                                .strokeBorder(
-                                    isHovering ? color.opacity(0.5) : .white.opacity(0.2),
-                                    lineWidth: 1
-                                )
-                        }
-                }
-        }
-        .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.85 : (isHovering ? 1.1 : 1.0))
-        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isHovering)
-        .animation(.spring(response: 0.15, dampingFraction: 0.5), value: isPressed)
-        .onHover { hovering in
-            isHovering = hovering
-        }
+    private func revealInFinder(path: String) {
+        let url = URL(fileURLWithPath: path)
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }
 
-extension AnyTransition {
-    static func blur(radius: CGFloat) -> AnyTransition {
-        AnyTransition.modifier(
-            active: BlurTransitionModifier(radius: radius),
-            identity: BlurTransitionModifier(radius: 0)
-        )
-    }
+#Preview {
+    FileQueueView(files: .constant([]))
 }
-private struct BlurTransitionModifier: ViewModifier {
-    let radius: CGFloat
-    func body(content: Content) -> some View {
-        content.blur(radius: radius)
-    }
-}
-
