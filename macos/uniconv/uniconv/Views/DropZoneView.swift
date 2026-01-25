@@ -76,8 +76,7 @@ struct DropZoneView: View {
         .shadow(color: isTargeted ? .accentColor.opacity(0.3) : .clear, radius: 20)
         .scaleEffect(isTargeted ? 1.02 : 1.0)
         .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isTargeted)
-        .focusable()
-        .focused($isFocused)
+        .focusable(false)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
             handleDrop(providers: providers)
             return true

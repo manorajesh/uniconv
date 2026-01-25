@@ -45,7 +45,7 @@ class ConversionManager: ObservableObject {
             }
         }
         
-        // Try using 'which' command
+        // Try using 'which' command (run on background queue during init)
         let process = Process()
         let pipe = Pipe()
         
@@ -56,6 +56,8 @@ class ConversionManager: ObservableObject {
         
         do {
             try process.run()
+            // This is acceptable during init as it's a quick one-time check
+            // and happens before UI is displayed
             process.waitUntilExit()
             
             if process.terminationStatus == 0 {
@@ -264,7 +266,14 @@ class ConversionManager: ObservableObject {
         
         do {
             try process.run()
-            process.waitUntilExit()
+            
+            // Wait for process on background thread to avoid blocking main thread
+            await withCheckedContinuation { continuation in
+                queue.async {
+                    process.waitUntilExit()
+                    continuation.resume()
+                }
+            }
             
             queue.sync(flags: .barrier) {
                 runningProcesses.removeValue(forKey: fileId)
@@ -350,7 +359,14 @@ class ConversionManager: ObservableObject {
         
         do {
             try process.run()
-            process.waitUntilExit()
+            
+            // Wait for process on background thread to avoid blocking main thread
+            await withCheckedContinuation { continuation in
+                queue.async {
+                    process.waitUntilExit()
+                    continuation.resume()
+                }
+            }
             
             queue.sync(flags: .barrier) {
                 runningProcesses.removeValue(forKey: fileId)
@@ -394,7 +410,14 @@ class ConversionManager: ObservableObject {
         process.standardOutput = Pipe()
         
         try process.run()
-        process.waitUntilExit()
+        
+        // Wait for process on background thread to avoid blocking main thread
+        await withCheckedContinuation { continuation in
+            queue.async {
+                process.waitUntilExit()
+                continuation.resume()
+            }
+        }
         
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: errorData, encoding: .utf8) ?? ""
