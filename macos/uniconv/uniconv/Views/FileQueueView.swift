@@ -225,10 +225,10 @@ struct FileRowView: View {
                 Text(file.error ?? "Unknown error")
                     .font(.system(size: 11))
                     .foregroundStyle(.red)
-                    .lineLimit(2)
+                    .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: 200, alignment: .leading)
+            .frame(maxWidth: 300, alignment: .leading)
         case .completed:
             Label("Completed", systemImage: "checkmark.circle.fill")
                 .font(.system(size: 11))
