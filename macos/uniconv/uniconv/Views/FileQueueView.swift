@@ -129,6 +129,7 @@ struct FileRowView: View {
     @State private var isHovering = false
     @State private var showOptionsSheet = false
     @State private var showLogSheet = false
+    @State private var showInfoSheet = false
     @Namespace private var actionNamespace
     
     var body: some View {
@@ -194,6 +195,9 @@ struct FileRowView: View {
         }
         .sheet(isPresented: $showLogSheet) {
             ConversionLogView(file: file)
+        }
+        .sheet(isPresented: $showInfoSheet) {
+            FileInfoView(file: file)
         }
     }
     
@@ -301,6 +305,20 @@ struct FileRowView: View {
                     .glassEffectID("logButton", in: actionNamespace)
                     .help("View conversion log")
                 }
+                
+                // File info button
+                Button(action: {
+                    showInfoSheet = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .glassEffectID("infoButton", in: actionNamespace)
+                .help("View file info")
                 
                 // Reveal in Finder button - show for completed files
                 if file.status == .completed, let outputPath = file.outputPath {

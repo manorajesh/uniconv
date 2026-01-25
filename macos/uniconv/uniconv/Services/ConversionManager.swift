@@ -250,9 +250,13 @@ class ConversionManager: ObservableObject {
         }
         
         // Set up progress monitoring
-        let outputPipe = Pipe()
-        process.standardError = outputPipe
+        let stderrPipe = Pipe()
+        process.standardError = stderrPipe
         process.standardOutput = Pipe()
+        
+        // Collected stderr for error parsing
+        var collectedStderr = ""
+        let stderrLock = NSLock()
         
         // Store the process
         queue.sync(flags: .barrier) {
@@ -261,7 +265,7 @@ class ConversionManager: ObservableObject {
         
         // Monitor progress in background
         Task {
-            await monitorFFmpegProgress(pipe: outputPipe, duration: duration, file: file)
+            await monitorFFmpegProgress(pipe: stderrPipe, duration: duration, file: file, collectedOutput: &collectedStderr, lock: stderrLock)
         }
         
         do {
@@ -280,15 +284,30 @@ class ConversionManager: ObservableObject {
             }
             
             if process.terminationStatus != 0 {
+                // Parse the error for a user-friendly message
+                stderrLock.lock()
+                let stderr = collectedStderr
+                stderrLock.unlock()
+                
+                let parsedError = ErrorParser.parseFFmpegError(from: stderr, exitCode: process.terminationStatus)
+                
                 await MainActor.run {
                     file.conversionLog += "\n[ERROR] FFmpeg exited with status \(process.terminationStatus)\n"
+                    if let details = parsedError.details {
+                        file.conversionLog += "\(details)\n"
+                    }
                 }
-                throw ConversionError(message: "FFmpeg conversion failed with status \(process.terminationStatus)")
+                throw ConversionError(message: parsedError.displayMessage)
             } else {
                 await MainActor.run {
                     file.conversionLog += "\n[SUCCESS] Conversion completed successfully\n"
                 }
             }
+        } catch let error as ConversionError {
+            queue.sync(flags: .barrier) {
+                runningProcesses.removeValue(forKey: fileId)
+            }
+            throw error
         } catch {
             queue.sync(flags: .barrier) {
                 runningProcesses.removeValue(forKey: fileId)
@@ -348,13 +367,17 @@ class ConversionManager: ObservableObject {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
+        // Collected stderr for error parsing
+        var collectedStderr = ""
+        let stderrLock = NSLock()
+        
         queue.sync(flags: .barrier) {
             runningProcesses[fileId] = process
         }
         
         // Monitor output in background
         Task {
-            await monitorImageMagickOutput(outputPipe: outputPipe, errorPipe: errorPipe, file: file)
+            await monitorImageMagickOutput(outputPipe: outputPipe, errorPipe: errorPipe, file: file, collectedStderr: &collectedStderr, lock: stderrLock)
         }
         
         do {
@@ -373,18 +396,34 @@ class ConversionManager: ObservableObject {
             }
             
             if process.terminationStatus != 0 {
+                // Read any remaining error output
                 let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                let additionalError = String(data: errorData, encoding: .utf8) ?? ""
+                
+                stderrLock.lock()
+                collectedStderr += additionalError
+                let stderr = collectedStderr
+                stderrLock.unlock()
+                
+                let parsedError = ErrorParser.parseImageMagickError(from: stderr, exitCode: process.terminationStatus)
+                
                 await MainActor.run {
                     file.conversionLog += "\n[ERROR] ImageMagick exited with status \(process.terminationStatus)\n"
-                    file.conversionLog += errorString + "\n"
+                    if !stderr.isEmpty {
+                        file.conversionLog += stderr + "\n"
+                    }
                 }
-                throw ConversionError(message: "ImageMagick conversion failed: \(errorString)")
+                throw ConversionError(message: parsedError.displayMessage)
             } else {
                 await MainActor.run {
                     file.conversionLog += "\n[SUCCESS] Conversion completed successfully\n"
                 }
             }
+        } catch let error as ConversionError {
+            queue.sync(flags: .barrier) {
+                runningProcesses.removeValue(forKey: fileId)
+            }
+            throw error
         } catch {
             queue.sync(flags: .barrier) {
                 runningProcesses.removeValue(forKey: fileId)
@@ -438,12 +477,33 @@ class ConversionManager: ObservableObject {
         return 0
     }
     
-    private func monitorFFmpegProgress(pipe: Pipe, duration: Double, file: FileItem) async {
+    private func monitorFFmpegProgress(pipe: Pipe, duration: Double, file: FileItem, collectedOutput: inout String, lock: NSLock) async {
         let handle = pipe.fileHandleForReading
         
-        handle.readabilityHandler = { fileHandle in
+        // Use a class to capture the output since we can't use inout in closures
+        class OutputCollector {
+            var output = ""
+            let lock: NSLock
+            
+            init(lock: NSLock) {
+                self.lock = lock
+            }
+            
+            func append(_ text: String) {
+                lock.lock()
+                output += text
+                lock.unlock()
+            }
+        }
+        
+        let collector = OutputCollector(lock: lock)
+        
+        handle.readabilityHandler = { [collector] fileHandle in
             let data = fileHandle.availableData
             guard let output = String(data: data, encoding: .utf8) else { return }
+            
+            // Collect output for error parsing
+            collector.append(output)
             
             // Log the output
             Task { @MainActor in
@@ -452,11 +512,34 @@ class ConversionManager: ObservableObject {
             
             self.parseFFmpegOutput(output, duration: duration, file: file)
         }
+        
+        // Copy collected output back
+        lock.lock()
+        collectedOutput = collector.output
+        lock.unlock()
     }
     
-    private func monitorImageMagickOutput(outputPipe: Pipe, errorPipe: Pipe, file: FileItem) async {
+    private func monitorImageMagickOutput(outputPipe: Pipe, errorPipe: Pipe, file: FileItem, collectedStderr: inout String, lock: NSLock) async {
         let outputHandle = outputPipe.fileHandleForReading
         let errorHandle = errorPipe.fileHandleForReading
+        
+        // Use a class to capture the stderr since we can't use inout in closures
+        class StderrCollector {
+            var stderr = ""
+            let lock: NSLock
+            
+            init(lock: NSLock) {
+                self.lock = lock
+            }
+            
+            func append(_ text: String) {
+                lock.lock()
+                stderr += text
+                lock.unlock()
+            }
+        }
+        
+        let collector = StderrCollector(lock: lock)
         
         outputHandle.readabilityHandler = { fileHandle in
             let data = fileHandle.availableData
@@ -467,14 +550,22 @@ class ConversionManager: ObservableObject {
             }
         }
         
-        errorHandle.readabilityHandler = { fileHandle in
+        errorHandle.readabilityHandler = { [collector] fileHandle in
             let data = fileHandle.availableData
             guard let output = String(data: data, encoding: .utf8), !output.isEmpty else { return }
+            
+            // Collect stderr for error parsing
+            collector.append(output)
             
             Task { @MainActor in
                 file.conversionLog += output
             }
         }
+        
+        // Copy collected stderr back
+        lock.lock()
+        collectedStderr = collector.stderr
+        lock.unlock()
     }
     
     private func parseFFmpegOutput(_ output: String, duration: Double, file: FileItem) {

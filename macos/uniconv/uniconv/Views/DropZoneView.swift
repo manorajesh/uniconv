@@ -121,16 +121,34 @@ struct DropZoneView: View {
         let pasteboard = NSPasteboard.general
         
         // Try to get file URLs from clipboard
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] {
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] {
             for url in urls {
                 if url.isFileURL {
                     addFile(url: url)
                 }
             }
-            return
+            if !urls.isEmpty { return }
         }
         
-        // Try to get image from clipboard and save it as temp file
+        // Try to get image data directly from clipboard (handles copied images better)
+        // Check for common image pasteboard types
+        let imageTypes: [NSPasteboard.PasteboardType] = [
+            .png,
+            .tiff,
+            NSPasteboard.PasteboardType("public.jpeg"),
+            NSPasteboard.PasteboardType("public.heic")
+        ]
+        
+        for imageType in imageTypes {
+            if let imageData = pasteboard.data(forType: imageType) {
+                if let image = NSImage(data: imageData) {
+                    saveImageFromClipboard(image)
+                    return
+                }
+            }
+        }
+        
+        // Fallback: Try NSImage initializer with pasteboard
         if let image = NSImage(pasteboard: pasteboard) {
             saveImageFromClipboard(image)
             return
