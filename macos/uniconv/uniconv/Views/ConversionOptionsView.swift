@@ -42,7 +42,7 @@ struct ConversionOptionsView: View {
                 }
             }
         }
-        .frame(width: 500, height: 450)
+        .frame(minWidth: 450, idealWidth: 500, maxWidth: 600, minHeight: 400, idealHeight: 480, maxHeight: 600)
     }
     
     // MARK: - Video Options

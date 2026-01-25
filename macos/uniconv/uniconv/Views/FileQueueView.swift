@@ -152,11 +152,13 @@ struct FileRowView: View {
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .help(file.name)
                 
                 statusView
             }
+            .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
             
-            Spacer(minLength: 8)
+            Spacer(minLength: 12)
             
             // Format selector or status indicator
             if file.status == .pending || file.status == .error {
@@ -216,10 +218,17 @@ struct FileRowView: View {
                     .monospacedDigit()
             }
         case .error:
-            Label(file.error ?? "Unknown error", systemImage: "exclamationmark.triangle.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(.red)
-                .lineLimit(1)
+            HStack(alignment: .top, spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+                Text(file.error ?? "Unknown error")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: 200, alignment: .leading)
         case .completed:
             Label("Completed", systemImage: "checkmark.circle.fill")
                 .font(.system(size: 11))

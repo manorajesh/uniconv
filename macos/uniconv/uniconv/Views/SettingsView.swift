@@ -20,7 +20,7 @@ struct SettingsView: View {
                     Label("About", systemImage: "info.circle")
                 }
         }
-        .frame(width: 500, height: 320)
+        .frame(minWidth: 480, idealWidth: 520, maxWidth: 600, minHeight: 300, idealHeight: 340, maxHeight: 450)
     }
 }
 
@@ -207,7 +207,7 @@ struct MenuBarContentView: View {
                 .padding(12)
             }
         }
-        .frame(width: 500, height: files.isEmpty ? 300 : 600)
+        .frame(minWidth: 450, idealWidth: 500, maxWidth: 550, minHeight: files.isEmpty ? 280 : 500, idealHeight: files.isEmpty ? 300 : 600, maxHeight: 700)
         .background(.background)
         .animation(.easeInOut(duration: 0.2), value: files.isEmpty)
     }

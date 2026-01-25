@@ -22,12 +22,14 @@ struct ConversionLogView: View {
                             } description: {
                                 Text("Conversion output will appear here")
                             }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .frame(maxWidth: .infinity, minHeight: 300)
                         } else {
                             Text(file.conversionLog)
                                 .font(.system(size: 11, design: .monospaced))
                                 .textSelection(.enabled)
-                                .padding()
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .id("bottom")
                         }
@@ -65,7 +67,7 @@ struct ConversionLogView: View {
                 }
             }
         }
-        .frame(width: 700, height: 500)
+        .frame(minWidth: 550, idealWidth: 700, maxWidth: 900, minHeight: 400, idealHeight: 500, maxHeight: 700)
     }
     
     private func copyLog() {

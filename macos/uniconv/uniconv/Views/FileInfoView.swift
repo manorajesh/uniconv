@@ -34,7 +34,8 @@ struct FileInfoView: View {
                                 Text("Output").tag(1)
                             }
                             .pickerStyle(.segmented)
-                            .padding()
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
                         }
                         
                         ScrollView {
@@ -45,7 +46,8 @@ struct FileInfoView: View {
                                     FileInfoContent(info: info, fileType: file.type)
                                 }
                             }
-                            .padding()
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
                         }
                     }
                 }
@@ -61,7 +63,7 @@ struct FileInfoView: View {
                 }
             }
         }
-        .frame(width: 450, height: 500)
+        .frame(minWidth: 450, idealWidth: 500, maxWidth: 600, minHeight: 450, idealHeight: 520, maxHeight: 700)
         .task {
             await loadFileInfo()
         }
@@ -177,14 +179,15 @@ struct FileInfoContent: View {
             
             // Path info
             InfoSection(title: "Location") {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Path")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                     Text(info.path)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .textSelection(.enabled)
-                        .lineLimit(3)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -207,14 +210,15 @@ struct InfoSection<Content: View>: View {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
+                .padding(.leading, 2)
             
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 content
             }
-            .padding(12)
+            .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 10)
                     .fill(.background.secondary)
             }
         }
@@ -226,17 +230,20 @@ struct InfoRow: View {
     let value: String
     
     var body: some View {
-        HStack {
+        HStack(alignment: .top, spacing: 12) {
             Text(label)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-                .frame(width: 100, alignment: .leading)
+                .frame(minWidth: 90, alignment: .leading)
+                .lineLimit(1)
             
             Text(value)
                 .font(.system(size: 12))
                 .textSelection(.enabled)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
