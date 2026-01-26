@@ -58,11 +58,11 @@ struct FileQueueView: View {
             Divider()
                 .padding(.horizontal, 16)
             
-            // File list
+            // File list with glass morphing transitions
             LazyVStack(spacing: 8) {
                 ForEach(files) { file in
                     FileRowView(file: file, onRemove: {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             removeFile(file)
                         }
                     }, onRetry: {
@@ -70,19 +70,21 @@ struct FileQueueView: View {
                     }, onCancel: {
                         cancelConversion(file)
                     })
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.9).combined(with: .opacity),
-                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                    ))
+                    .transition(
+                        .asymmetric(
+                            insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
+                            removal: .scale(scale: 0.85).combined(with: .opacity)
+                        )
+                    )
                 }
             }
             .padding(16)
         }
         .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.background.secondary)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.background.secondary.opacity(0.5))
         }
-        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
     }
     
     private func convertAll() {
@@ -134,17 +136,15 @@ struct FileRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // File type icon with background
+            // File type icon with background and glass effect
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(iconBackgroundColor)
-                    .frame(width: 36, height: 36)
-                
                 Image(systemName: FormatUtils.getFileTypeIcon(file.type))
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(iconColor)
                     .symbolEffect(.pulse, isActive: file.status == .converting)
+                    .frame(width: 36, height: 36)
             }
+            .glassEffect(.regular.tint(iconColor.opacity(0.3)), in: .rect(cornerRadius: 10))
             
             // File info
             VStack(alignment: .leading, spacing: 4) {
@@ -183,12 +183,13 @@ struct FileRowView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isHovering ? Color.secondary.opacity(0.1) : Color.clear)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isHovering ? Color.secondary.opacity(0.08) : Color.clear)
         }
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .glassEffect(isHovering ? .regular : .identity, in: .rect(cornerRadius: 14))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 isHovering = hovering
             }
         }
@@ -205,43 +206,49 @@ struct FileRowView: View {
     
     @ViewBuilder
     private var statusView: some View {
-        switch file.status {
-        case .converting:
-            VStack(alignment: .leading, spacing: 4) {
-                ProgressView(value: file.progress, total: 100)
-                    .progressViewStyle(.linear)
-                    .tint(Color.accentColor)
-                
-                Text(progressText)
+        Group {
+            switch file.status {
+            case .converting:
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressView(value: file.progress, total: 100)
+                        .progressViewStyle(.linear)
+                        .tint(Color.accentColor)
+                    
+                    Text(progressText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: false))
+                }
+            case .error:
+                HStack(alignment: .top, spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.red)
+                        .symbolEffect(.pulse, options: .repeating)
+                    Text(file.error ?? "Unknown error")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.red)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: 300, alignment: .leading)
+            case .completed:
+                Label("Completed", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.green)
+                    .symbolEffect(.bounce, value: file.status)
+            case .cancelled:
+                Label("Cancelled", systemImage: "xmark.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+            case .pending:
+                Text("Ready to convert")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                    .monospacedDigit()
             }
-        case .error:
-            HStack(alignment: .top, spacing: 4) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.red)
-                Text(file.error ?? "Unknown error")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.red)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: 300, alignment: .leading)
-        case .completed:
-            Label("Completed", systemImage: "checkmark.circle.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(.green)
-        case .cancelled:
-            Label("Cancelled", systemImage: "xmark.circle.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(.orange)
-        case .pending:
-            Text("Ready to convert")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: file.status)
     }
     
     @ViewBuilder

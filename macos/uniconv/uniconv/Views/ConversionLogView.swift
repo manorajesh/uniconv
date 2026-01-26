@@ -17,12 +17,18 @@ struct ConversionLogView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         if file.conversionLog.isEmpty {
-                            ContentUnavailableView {
-                                Label("No Log Data", systemImage: "doc.text")
-                            } description: {
+                            VStack(spacing: 12) {
+                                Image(systemName: "doc.text")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(.secondary)
+                                Text("No Log Data")
+                                    .font(.headline)
                                 Text("Conversion output will appear here")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
                             }
                             .frame(maxWidth: .infinity, minHeight: 300)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 16))
                         } else {
                             Text(file.conversionLog)
                                 .font(.system(size: 11, design: .monospaced))
@@ -49,6 +55,7 @@ struct ConversionLogView: View {
                     Button(action: copyLog) {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
+                    .buttonStyle(.glass)
                     .disabled(file.conversionLog.isEmpty)
                 }
                 
@@ -56,6 +63,7 @@ struct ConversionLogView: View {
                     Button(action: clearLog) {
                         Label("Clear", systemImage: "trash")
                     }
+                    .buttonStyle(.glass)
                     .disabled(file.conversionLog.isEmpty)
                 }
                 
@@ -63,6 +71,7 @@ struct ConversionLogView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .buttonStyle(.glass)
                     .keyboardShortcut(.cancelAction)
                 }
             }

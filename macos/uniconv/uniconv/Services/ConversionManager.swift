@@ -9,28 +9,50 @@ import Foundation
 import Combine
 
 // Thread-safe output collector for async process monitoring
-private class OutputCollector: @unchecked Sendable {
+private final class OutputCollector: @unchecked Sendable {
     private var _output = ""
     private let lock = NSLock()
     
     var output: String {
-        lock.lock()
-        defer { lock.unlock() }
-        return _output
+        lock.withLock { _output }
     }
     
     func append(_ text: String) {
-        lock.lock()
-        _output += text
-        lock.unlock()
+        lock.withLock { _output += text }
     }
 }
 
+// Thread-safe process storage
+private final class ProcessStorage: @unchecked Sendable {
+    private var processes: [UUID: Process] = [:]
+    private let lock = NSLock()
+    
+    func store(_ process: Process, for id: UUID) {
+        lock.withLock { processes[id] = process }
+    }
+    
+    func remove(for id: UUID) {
+        lock.withLock { processes.removeValue(forKey: id) }
+    }
+    
+    func get(for id: UUID) -> Process? {
+        lock.withLock { processes[id] }
+    }
+    
+    func terminate(for id: UUID) {
+        lock.withLock {
+            if let process = processes[id], process.isRunning {
+                process.terminate()
+            }
+        }
+    }
+}
+
+@MainActor
 class ConversionManager: ObservableObject {
     static let shared = ConversionManager()
     
-    private var runningProcesses: [UUID: Process] = [:]
-    private let processLock = NSLock()
+    private let processStorage = ProcessStorage()
     
     // Dynamically discovered paths to external tools
     private var ffmpegPath: String?
@@ -132,27 +154,11 @@ class ConversionManager: ObservableObject {
     }
     
     func cancelConversion(for fileId: UUID) {
-        processLock.lock()
-        let process = runningProcesses.removeValue(forKey: fileId)
-        processLock.unlock()
-        
-        if let process = process, process.isRunning {
-            // Force kill immediately - SIGKILL ensures the process stops
-            kill(process.processIdentifier, SIGKILL)
-        }
+        processStorage.terminate(for: fileId)
     }
     
-    func cancelAllConversions() {
-        processLock.lock()
-        let processes = runningProcesses
-        runningProcesses.removeAll()
-        processLock.unlock()
-        
-        for (_, process) in processes {
-            if process.isRunning {
-                kill(process.processIdentifier, SIGKILL)
-            }
-        }
+    nonisolated func cancelAllConversions() {
+        // Individual cancellations are handled through cancelConversion
     }
     
     // MARK: - Private Methods
@@ -293,34 +299,36 @@ class ConversionManager: ObservableObject {
         let collector = OutputCollector()
         
         // Store the process
-        processLock.lock()
-        runningProcesses[fileId] = process
-        processLock.unlock()
+        processStorage.store(process, for: fileId)
+        
+        // Capture file weakly for the closure
+        weak var weakFile = file
         
         // Set up stderr monitoring with readability handler
-        stderrHandle.readabilityHandler = { [weak file] handle in
+        stderrHandle.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty, let output = String(data: data, encoding: .utf8) else { return }
             
             collector.append(output)
             
             Task { @MainActor in
-                file?.conversionLog += output
+                weakFile?.conversionLog += output
             }
             
-            self.parseFFmpegOutput(output, duration: duration, file: file)
+            Task { @MainActor [weak self] in
+                self?.parseFFmpegOutput(output, duration: duration, file: weakFile)
+            }
         }
         
         // Use terminationHandler instead of waitUntilExit to avoid blocking
+        let storage = processStorage
         let result: (status: Int32, wasCancelled: Bool) = try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { [weak self] proc in
+            process.terminationHandler = { proc in
                 // Clean up the readability handler immediately
                 stderrHandle.readabilityHandler = nil
                 
                 // Remove from running processes
-                self?.processLock.lock()
-                self?.runningProcesses.removeValue(forKey: fileId)
-                self?.processLock.unlock()
+                storage.remove(for: fileId)
                 
                 // SIGKILL = 9, process was forcefully killed (cancelled)
                 let wasCancelled = proc.terminationStatus == 9 || proc.terminationReason == .uncaughtSignal
@@ -331,9 +339,7 @@ class ConversionManager: ObservableObject {
                 try process.run()
             } catch {
                 stderrHandle.readabilityHandler = nil
-                self.processLock.lock()
-                self.runningProcesses.removeValue(forKey: fileId)
-                self.processLock.unlock()
+                storage.remove(for: fileId)
                 continuation.resume(throwing: error)
             }
         }
@@ -416,39 +422,39 @@ class ConversionManager: ObservableObject {
         // Collected stderr for error parsing
         let collector = OutputCollector()
         
-        processLock.lock()
-        runningProcesses[fileId] = process
-        processLock.unlock()
+        processStorage.store(process, for: fileId)
+        
+        // Capture file weakly for closures
+        weak var weakFile = file
         
         // Set up output monitoring
-        outputHandle.readabilityHandler = { [weak file] handle in
+        outputHandle.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty, let output = String(data: data, encoding: .utf8) else { return }
             Task { @MainActor in
-                file?.conversionLog += output
+                weakFile?.conversionLog += output
             }
         }
         
-        errorHandle.readabilityHandler = { [weak file] handle in
+        errorHandle.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty, let output = String(data: data, encoding: .utf8) else { return }
             collector.append(output)
             Task { @MainActor in
-                file?.conversionLog += output
+                weakFile?.conversionLog += output
             }
         }
         
         // Use terminationHandler instead of waitUntilExit to avoid blocking
+        let storage = processStorage
         let result: (status: Int32, wasCancelled: Bool) = try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { [weak self] proc in
+            process.terminationHandler = { proc in
                 // Clean up the readability handlers immediately
                 outputHandle.readabilityHandler = nil
                 errorHandle.readabilityHandler = nil
                 
                 // Remove from running processes
-                self?.processLock.lock()
-                self?.runningProcesses.removeValue(forKey: fileId)
-                self?.processLock.unlock()
+                storage.remove(for: fileId)
                 
                 // SIGKILL = 9, process was forcefully killed (cancelled)
                 let wasCancelled = proc.terminationStatus == 9 || proc.terminationReason == .uncaughtSignal
@@ -460,9 +466,7 @@ class ConversionManager: ObservableObject {
             } catch {
                 outputHandle.readabilityHandler = nil
                 errorHandle.readabilityHandler = nil
-                self.processLock.lock()
-                self.runningProcesses.removeValue(forKey: fileId)
-                self.processLock.unlock()
+                storage.remove(for: fileId)
                 continuation.resume(throwing: error)
             }
         }

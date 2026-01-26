@@ -29,15 +29,17 @@ struct GeneralSettingsView: View {
     @AppStorage("defaultOutputFolder") private var defaultOutputFolder = ""
     @AppStorage("keepOriginalFiles") private var keepOriginalFiles = true
     @AppStorage("showNotifications") private var showNotifications = true
+    @Namespace private var settingsNamespace
     
     private let labelWidth: CGFloat = 180
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Launch Mode
-            HStack(alignment: .top, spacing: 0) {
-                Text("Launch mode:")
-                    .frame(width: labelWidth, alignment: .trailing)
+        GlassEffectContainer(spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Launch Mode
+                HStack(alignment: .top, spacing: 0) {
+                    Text("Launch mode:")
+                        .frame(width: labelWidth, alignment: .trailing)
                     .padding(.trailing, 8)
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -77,6 +79,8 @@ struct GeneralSettingsView: View {
                     Button("Choose...") {
                         selectOutputFolder()
                     }
+                    .buttonStyle(.glass)
+                    .glassEffectID("chooseFolder", in: settingsNamespace)
                 }
             }
             .padding(.vertical, 12)
@@ -104,8 +108,9 @@ struct GeneralSettingsView: View {
             .padding(.vertical, 6)
             
             Spacer()
+            }
+            .padding(20)
         }
-        .padding(20)
     }
     
     private func selectOutputFolder() {
@@ -124,13 +129,21 @@ struct GeneralSettingsView: View {
 }
 
 struct AboutSettingsView: View {
+    @State private var isAnimating = false
+    
     var body: some View {
         VStack(spacing: 16) {
             Spacer()
             
-            Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.blue.gradient)
+            ZStack {
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.blue.gradient)
+                    .symbolEffect(.rotate, options: .repeating.speed(0.3), isActive: isAnimating)
+            }
+            .frame(width: 100, height: 100)
+            .glassEffect(.regular.tint(.blue.opacity(0.2)), in: .circle)
+            .onAppear { isAnimating = true }
             
             Text("UniConv")
                 .font(.title)
@@ -146,8 +159,11 @@ struct AboutSettingsView: View {
             
             Link(destination: URL(string: "https://github.com/manorajesh/uniconv")!) {
                 Label("GitHub", systemImage: "link")
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
             }
-            .buttonStyle(.link)
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: .capsule)
             
             Spacer()
             
@@ -163,53 +179,74 @@ struct AboutSettingsView: View {
 // Condensed view for menu bar popover
 struct MenuBarContentView: View {
     @State private var files: [FileItem] = []
+    @Namespace private var menuBarNamespace
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("UniConv")
-                    .font(.headline)
-                
-                Spacer()
-                
-                SettingsLink {
-                    Image(systemName: "gear")
-                        .foregroundColor(.secondary)
+            // Header with glass effects
+            GlassEffectContainer(spacing: 12) {
+                HStack {
+                    Text("UniConv")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    SettingsLink {
+                        Image(systemName: "gear")
+                            .foregroundColor(.secondary)
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .glassEffectID("settings", in: menuBarNamespace)
+                    .help("Settings")
+                    
+                    Button(action: quitApp) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.secondary)
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .glassEffectID("quit", in: menuBarNamespace)
+                    .help("Quit UniConv")
                 }
-                .buttonStyle(.plain)
-                .help("Settings")
-                
-                Button(action: quitApp) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Quit UniConv")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             
             Divider()
             
-            // Content
+            // Content with glass container
             ScrollView {
-                VStack(spacing: 12) {
-                    // Drop zone (compact)
-                    DropZoneView(files: $files)
-                        .frame(height: files.isEmpty ? 200 : 120)
-                    
-                    // File queue
-                    if !files.isEmpty {
-                        FileQueueView(files: $files)
+                GlassEffectContainer(spacing: 12) {
+                    VStack(spacing: 12) {
+                        // Drop zone (compact)
+                        DropZoneView(files: $files)
+                            .frame(height: files.isEmpty ? 200 : 120)
+                            .glassEffectID("menuDropZone", in: menuBarNamespace)
+                        
+                        // File queue
+                        if !files.isEmpty {
+                            FileQueueView(files: $files)
+                                .glassEffectID("menuFileQueue", in: menuBarNamespace)
+                                .transition(
+                                    .scale(scale: 0.95)
+                                    .combined(with: .opacity)
+                                )
+                        }
                     }
+                    .padding(12)
                 }
-                .padding(12)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: files.isEmpty)
             }
         }
         .frame(minWidth: 450, idealWidth: 500, maxWidth: 550, minHeight: files.isEmpty ? 280 : 500, idealHeight: files.isEmpty ? 300 : 600, maxHeight: 700)
-        .background(.background)
-        .animation(.easeInOut(duration: 0.2), value: files.isEmpty)
+        .background {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.background.opacity(0.8))
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: files.isEmpty)
     }
     
     private func quitApp() {

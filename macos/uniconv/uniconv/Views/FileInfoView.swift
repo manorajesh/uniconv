@@ -15,6 +15,8 @@ struct FileInfoView: View {
     @State private var outputInfo: FileInfo?
     @State private var isLoading = true
     @State private var selectedTab = 0
+    @Namespace private var infoNamespace
+    @State private var appearAnimation = false
     
     private var hasOutput: Bool {
         file.outputPath != nil && FileManager.default.fileExists(atPath: file.outputPath!)
@@ -24,16 +26,26 @@ struct FileInfoView: View {
         NavigationStack {
             Group {
                 if isLoading {
-                    ProgressView("Loading file info...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Loading file info...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
                 } else {
                     VStack(spacing: 0) {
                         if hasOutput {
-                            Picker("", selection: $selectedTab) {
-                                Text("Input").tag(0)
-                                Text("Output").tag(1)
+                            GlassEffectContainer(spacing: 8) {
+                                Picker("", selection: $selectedTab) {
+                                    Text("Input").tag(0)
+                                    Text("Output").tag(1)
+                                }
+                                .pickerStyle(.segmented)
+                                .glassEffectID("tabPicker", in: infoNamespace)
                             }
-                            .pickerStyle(.segmented)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 16)
                         }
@@ -42,12 +54,21 @@ struct FileInfoView: View {
                             VStack(spacing: 16) {
                                 if selectedTab == 0, let info = inputInfo {
                                     FileInfoContent(info: info, fileType: file.type)
+                                        .transition(.asymmetric(
+                                            insertion: .move(edge: .leading).combined(with: .opacity),
+                                            removal: .move(edge: .trailing).combined(with: .opacity)
+                                        ))
                                 } else if selectedTab == 1, let info = outputInfo {
                                     FileInfoContent(info: info, fileType: file.type)
+                                        .transition(.asymmetric(
+                                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                                            removal: .move(edge: .leading).combined(with: .opacity)
+                                        ))
                                 }
                             }
                             .padding(.horizontal, 20)
                             .padding(.vertical, 16)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedTab)
                         }
                     }
                 }
@@ -59,6 +80,7 @@ struct FileInfoView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .buttonStyle(.glass)
                     .keyboardShortcut(.cancelAction)
                 }
             }
@@ -204,6 +226,7 @@ struct FileInfoContent: View {
 struct InfoSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
+    @State private var isHovering = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -218,8 +241,14 @@ struct InfoSection<Content: View>: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.background.secondary)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.background.secondary.opacity(isHovering ? 0.8 : 0.5))
+            }
+            .glassEffect(isHovering ? .regular : .identity, in: .rect(cornerRadius: 12))
+            .onHover { hovering in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    isHovering = hovering
+                }
             }
         }
     }

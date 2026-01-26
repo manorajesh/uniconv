@@ -198,7 +198,7 @@ class MenuBarManager: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         if #available(macOS 14, *) {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else if #available(macOS 13, *) {
+        } else {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         }
     }

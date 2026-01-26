@@ -10,6 +10,8 @@ import SwiftUI
 struct ConversionOptionsView: View {
     @ObservedObject var file: FileItem
     @Environment(\.dismiss) var dismiss
+    @Namespace private var optionsNamespace
+    @State private var selectedSection: String? = nil
     
     var body: some View {
         NavigationStack {
@@ -33,11 +35,13 @@ struct ConversionOptionsView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .buttonStyle(.glass)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
                     }
+                    .buttonStyle(.glassProminent)
                     .keyboardShortcut(.return)
                 }
             }
@@ -203,13 +207,22 @@ struct ConversionOptionsView: View {
             Label("Preview", systemImage: "info.circle")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
+                .symbolEffect(.pulse, options: .repeating.speed(0.5), isActive: true)
             
             Text(conversionDescription)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.numericText())
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: conversionDescription)
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.background.secondary.opacity(0.5))
+        }
+        .glassEffect(.regular, in: .rect(cornerRadius: 10))
     }
     
     private var qualityDescription: String {
