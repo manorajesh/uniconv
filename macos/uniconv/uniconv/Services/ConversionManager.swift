@@ -165,7 +165,7 @@ class ConversionManager: ObservableObject {
     
     private func performConversion(for file: FileItem) async throws -> String {
         let inputURL = URL(fileURLWithPath: file.path)
-        let outputPath = generateOutputPath(for: inputURL, format: file.selectedFormat)
+        let outputPath = generateOutputPath(for: inputURL, format: file.selectedFormat, customName: file.customOutputName)
         
         let format = file.selectedFormat.lowercased()
         
@@ -590,8 +590,13 @@ class ConversionManager: ObservableObject {
         }
     }
     
-    private func generateOutputPath(for inputURL: URL, format: String) -> String {
-        let filename = inputURL.deletingPathExtension().lastPathComponent
+    private func generateOutputPath(for inputURL: URL, format: String, customName: String? = nil) -> String {
+        let filename: String
+        if let custom = customName, !custom.isEmpty {
+            filename = custom
+        } else {
+            filename = inputURL.deletingPathExtension().lastPathComponent
+        }
         
         // Check if user has set a custom output folder
         let defaultOutputFolder = UserDefaults.standard.string(forKey: "defaultOutputFolder") ?? ""

@@ -36,6 +36,7 @@ class FileItem: ObservableObject, Identifiable {
     @Published var outputPath: String?
     @Published var error: String?
     @Published var options: ConversionOptions = .default
+    @Published var customOutputName: String? // User-defined output filename (without extension)
     
     // FFmpeg progress details
     @Published var fps: Double?
@@ -43,6 +44,18 @@ class FileItem: ObservableObject, Identifiable {
     @Published var speed: Double?
     @Published var etaSeconds: Double?
     @Published var conversionLog: String = ""
+    
+    /// The display name showing the output filename with the target extension
+    var outputDisplayName: String {
+        let baseName: String
+        if let custom = customOutputName, !custom.isEmpty {
+            baseName = custom
+        } else {
+            // Remove the original extension from the name
+            baseName = (name as NSString).deletingPathExtension
+        }
+        return "\(baseName).\(selectedFormat)"
+    }
     
     init(id: UUID = UUID(), path: String, name: String, type: FileType, 
          selectedFormat: String, availableFormats: [String]) {

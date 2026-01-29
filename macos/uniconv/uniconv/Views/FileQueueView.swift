@@ -132,7 +132,12 @@ struct FileRowView: View {
     @State private var showOptionsSheet = false
     @State private var showLogSheet = false
     @State private var showInfoSheet = false
+    @State private var isEditingName = false
+    @State private var editedName: String = ""
+    @State private var showReplaceAlert = false
+    @State private var renameError: String? = nil
     @Namespace private var actionNamespace
+    @FocusState private var isNameFieldFocused: Bool
     
     var body: some View {
         HStack(spacing: 12) {
@@ -148,11 +153,93 @@ struct FileRowView: View {
             
             // File info
             VStack(alignment: .leading, spacing: 4) {
-                Text(file.name)
-                    .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(file.name)
+                if isEditingName {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            HStack(spacing: 0) {
+                                TextField("Filename", text: $editedName)
+                                    .textFieldStyle(.plain)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .focused($isNameFieldFocused)
+                                    .onSubmit {
+                                        commitRename()
+                                    }
+                                    .onChange(of: editedName) { _, _ in
+                                        renameError = nil // Clear error when user types
+                                    }
+                                Text(".\(file.selectedFormat)")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color.primary.opacity(0.1))
+                            }
+                            
+                            // Cancel button
+                            Button {
+                                cancelRename()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Cancel rename")
+                        }
+                        
+                        if let error = renameError {
+                            Text(error)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red)
+                        }
+                    }
+                    .onAppear {
+                        isNameFieldFocused = true
+                    }
+                } else {
+                    Text(file.outputDisplayName)
+                        .font(.system(size: 13, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help("Output: \(file.outputDisplayName)\nOriginal: \(file.name)")
+                        .onTapGesture(count: 2) {
+                            startRename()
+                        }
+                        .contextMenu {
+                            Button {
+                                startRename()
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            
+                            Divider()
+                            
+                            Button {
+                                showInfoSheet = true
+                            } label: {
+                                Label("Get Info", systemImage: "info.circle")
+                            }
+                            
+                            if file.status == .completed, let outputPath = file.outputPath {
+                                Button {
+                                    revealInFinder(path: outputPath)
+                                } label: {
+                                    Label("Show in Finder", systemImage: "arrow.up.forward.square")
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            Button(role: .destructive) {
+                                onRemove()
+                            } label: {
+                                Label("Remove", systemImage: "trash")
+                            }
+                        }
+                }
                 
                 statusView
             }
@@ -202,6 +289,16 @@ struct FileRowView: View {
         .sheet(isPresented: $showInfoSheet) {
             FileInfoView(file: file)
         }
+        .alert("File Already Exists", isPresented: $showReplaceAlert) {
+            Button("Replace", role: .destructive) {
+                forceCommitRename()
+            }
+            Button("Cancel", role: .cancel) {
+                // Keep editing mode active so user can change the name
+            }
+        } message: {
+            Text("A file named \"\(editedName).\(file.selectedFormat)\" already exists in the output folder. Do you want to replace it?")
+        }
     }
     
     @ViewBuilder
@@ -213,26 +310,33 @@ struct FileRowView: View {
                     ProgressView(value: file.progress, total: 100)
                         .progressViewStyle(.linear)
                         .tint(Color.accentColor)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: file.progress)
                     
-                    Text(progressText)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                        .contentTransition(.numericText(countsDown: false))
+                    HStack(spacing: 0) {
+                        Text("\(Int(file.progress))%")
+                            .contentTransition(.numericText(countsDown: false))
+                        
+                        if let speed = file.speed, speed > 0, speed.isFinite {
+                            Text(" · ")
+                            Text("\(String(format: "%.1f", speed))×")
+                                .contentTransition(.numericText())
+                        }
+                        
+                        if let eta = formattedEta {
+                            Text(" · ")
+                            Text(eta)
+                                .contentTransition(.numericText(countsDown: true))
+                        }
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: file.progress)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: file.speed)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: file.etaSeconds)
                 }
             case .error:
-                HStack(alignment: .top, spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.red)
-                        .symbolEffect(.pulse, options: .repeating)
-                    Text(file.error ?? "Unknown error")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.red)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: 300, alignment: .leading)
+                ErrorStatusView(errorMessage: file.error)
             case .completed:
                 Label("Completed", systemImage: "checkmark.circle.fill")
                     .font(.system(size: 11))
@@ -387,6 +491,10 @@ struct FileRowView: View {
         }
     }
     
+    private var formattedEta: String? {
+        formatEta(file.etaSeconds)
+    }
+    
     private var progressText: String {
         var parts: [String] = ["\(Int(file.progress))%"]
         
@@ -417,12 +525,148 @@ struct FileRowView: View {
         }
     }
     
+    private func startRename() {
+        // Get the base name without extension for editing
+        if let custom = file.customOutputName, !custom.isEmpty {
+            editedName = custom
+        } else {
+            editedName = (file.name as NSString).deletingPathExtension
+        }
+        renameError = nil
+        isEditingName = true
+    }
+    
+    private func cancelRename() {
+        isEditingName = false
+        renameError = nil
+    }
+    
+    private func commitRename() {
+        let trimmed = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Validate filename
+        if trimmed.isEmpty {
+            renameError = "Filename cannot be empty"
+            return
+        }
+        
+        // Check for invalid characters (macOS filesystem restrictions)
+        let invalidCharacters = CharacterSet(charactersIn: "/:\\")
+        if trimmed.unicodeScalars.contains(where: { invalidCharacters.contains($0) }) {
+            renameError = "Filename cannot contain / : or \\"
+            return
+        }
+        
+        // Check if filename starts with a dot (hidden file)
+        if trimmed.hasPrefix(".") {
+            renameError = "Filename cannot start with a dot"
+            return
+        }
+        
+        // Check if the output file already exists
+        if checkOutputFileExists(filename: trimmed) {
+            showReplaceAlert = true
+            return
+        }
+        
+        // All validations passed
+        forceCommitRename()
+    }
+    
+    private func forceCommitRename() {
+        let trimmed = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        file.customOutputName = trimmed
+        isEditingName = false
+        renameError = nil
+    }
+    
+    private func checkOutputFileExists(filename: String) -> Bool {
+        let inputURL = URL(fileURLWithPath: file.path)
+        
+        // Determine output directory
+        let defaultOutputFolder = UserDefaults.standard.string(forKey: "defaultOutputFolder") ?? ""
+        let directory: URL
+        if !defaultOutputFolder.isEmpty && FileManager.default.fileExists(atPath: defaultOutputFolder) {
+            directory = URL(fileURLWithPath: defaultOutputFolder)
+        } else {
+            directory = inputURL.deletingLastPathComponent()
+        }
+        
+        let outputPath = directory.appendingPathComponent("\(filename).\(file.selectedFormat)").path
+        return FileManager.default.fileExists(atPath: outputPath)
+    }
+    
     private func revealInFinder(path: String) {
         let url = URL(fileURLWithPath: path)
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }
 
-#Preview {
-    FileQueueView(files: .constant([]))
+// MARK: - Error Status View
+
+struct ErrorStatusView: View {
+    let errorMessage: String?
+    @State private var isExpanded = false
+    
+    private var errorParts: (summary: String, suggestion: String?) {
+        guard let message = errorMessage else {
+            return ("Unknown error", nil)
+        }
+        
+        // Split by the suggestion marker
+        let parts = message.components(separatedBy: "\n\n💡 ")
+        if parts.count >= 2 {
+            return (parts[0], parts[1])
+        }
+        return (message, nil)
+    }
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 4) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.red)
+                .symbolEffect(.pulse, options: .repeating)
+            
+            Text(errorParts.summary)
+                .font(.system(size: 11))
+                .foregroundStyle(.red)
+                .lineLimit(1)
+            
+            if errorParts.suggestion != nil {
+                Button {
+                    isExpanded.toggle()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $isExpanded, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(errorParts.summary, systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.red)
+                        
+                        if let suggestion = errorParts.suggestion {
+                            Divider()
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.yellow)
+                                Text(suggestion)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .frame(width: 280)
+                }
+                .help("Show error details")
+            }
+        }
+    }
 }
+
