@@ -155,6 +155,18 @@ struct ConversionOptionsView: View {
     
     @ViewBuilder
     private var imageOptionsSection: some View {
+        Section("Conversion Engine") {
+            Picker("Engine", selection: $file.options.image.engine) {
+                ForEach(ImageConversionEngine.allCases, id: \.self) { engine in
+                    Text(engine.rawValue).tag(engine)
+                }
+            }
+            
+            Text(file.options.image.engine.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        
         Section("Image Quality") {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -262,6 +274,7 @@ struct ConversionOptionsView: View {
             
         case .image:
             var parts: [String] = []
+            parts.append("Engine: \(file.options.image.engine.rawValue.components(separatedBy: " ").first ?? "Auto")")
             parts.append("Quality: \(file.options.image.quality)%")
             if let maxDim = file.options.image.maxDimension {
                 parts.append("Max: \(maxDim)px")

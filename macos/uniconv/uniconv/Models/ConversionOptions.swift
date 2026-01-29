@@ -103,6 +103,19 @@ struct ImageOptions: Codable {
     var maxDimension: Int?
     var stripMetadata: Bool = true
     var autoOrient: Bool = true
+    var engine: ImageConversionEngine = .auto
+    
+    /// Determines whether to use native conversion based on input/output formats
+    func shouldUseNativeConversion(inputExtension: String, outputExtension: String) -> Bool {
+        switch engine {
+        case .native:
+            return true
+        case .imagemagick:
+            return false
+        case .auto:
+            return NativeImageConverter.canConvertNatively(from: inputExtension, to: outputExtension)
+        }
+    }
 }
 
 // MARK: - Combined Options

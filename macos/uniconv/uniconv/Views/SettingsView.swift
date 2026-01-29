@@ -29,6 +29,7 @@ struct GeneralSettingsView: View {
     @AppStorage("defaultOutputFolder") private var defaultOutputFolder = ""
     @AppStorage("keepOriginalFiles") private var keepOriginalFiles = true
     @AppStorage("showNotifications") private var showNotifications = true
+    @AppStorage("imageEngine") private var imageEngine = ImageConversionEngine.auto.rawValue
     @Namespace private var settingsNamespace
     
     private let labelWidth: CGFloat = 180
@@ -106,6 +107,32 @@ struct GeneralSettingsView: View {
                     .toggleStyle(.checkbox)
             }
             .padding(.vertical, 6)
+            
+            Divider()
+                .padding(.leading, labelWidth + 8)
+            
+            // Image Conversion Engine
+            HStack(alignment: .top, spacing: 0) {
+                Text("Image engine:")
+                    .frame(width: labelWidth, alignment: .trailing)
+                    .padding(.trailing, 8)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker("", selection: $imageEngine) {
+                        ForEach(ImageConversionEngine.allCases, id: \.rawValue) { engine in
+                            Text(engine.rawValue).tag(engine.rawValue)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
+                    
+                    Text(ImageConversionEngine(rawValue: imageEngine)?.description ?? "")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
+            }
+            .padding(.vertical, 12)
             
             Spacer()
             }

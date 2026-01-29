@@ -57,14 +57,17 @@ class ConversionManager: ObservableObject {
     // Dynamically discovered paths to external tools
     private var ffmpegPath: String?
     private var magickPath: String?
+    private var librawPath: String?
     
     private init() {
         // Find executables in PATH
         ffmpegPath = findExecutable(name: "ffmpeg")
         magickPath = findExecutable(name: "magick")
+        librawPath = findExecutable(name: "dcraw_emu") ?? findExecutable(name: "dcraw")
         
         print("Found ffmpeg at: \(ffmpegPath ?? "not found")")
         print("Found magick at: \(magickPath ?? "not found")")
+        print("Found libraw at: \(librawPath ?? "not found")")
     }
     
     // Find executable in common paths
@@ -168,12 +171,23 @@ class ConversionManager: ObservableObject {
         let outputPath = generateOutputPath(for: inputURL, format: file.selectedFormat, customName: file.customOutputName)
         
         let format = file.selectedFormat.lowercased()
+        let inputExtension = inputURL.pathExtension.lowercased()
         
         // Determine which tool to use
         if FormatUtils.videoOutputFormats.contains(format) || FormatUtils.audioOutputFormats.contains(format) {
             try await convertWithFFmpeg(fileId: file.id, inputPath: file.path, outputPath: outputPath, format: format, file: file)
         } else if FormatUtils.imageOutputFormats.contains(format) {
-            try await convertWithImageMagick(fileId: file.id, inputPath: file.path, outputPath: outputPath, file: file)
+            // Check if we should use native conversion
+            let useNative = file.options.image.shouldUseNativeConversion(
+                inputExtension: inputExtension,
+                outputExtension: format
+            )
+            
+            if useNative {
+                try await convertWithNativeImageIO(fileId: file.id, inputPath: file.path, outputPath: outputPath, file: file)
+            } else {
+                try await convertWithImageMagick(fileId: file.id, inputPath: file.path, outputPath: outputPath, file: file)
+            }
         } else {
             throw ConversionError(message: "Unsupported output format: \(format)")
         }
@@ -490,6 +504,98 @@ class ConversionManager: ObservableObject {
         } else {
             await MainActor.run {
                 file.conversionLog += "\n[SUCCESS] Conversion completed successfully\n"
+            }
+        }
+    }
+    
+    private func convertWithNativeImageIO(fileId: UUID, inputPath: String, outputPath: String, file: FileItem) async throws {
+        let inputURL = URL(fileURLWithPath: inputPath)
+        let inputExtension = inputURL.pathExtension.lowercased()
+        let isRAW = FormatUtils.isRAWFormat(inputExtension)
+        
+        // Add initial log entry
+        await MainActor.run {
+            file.conversionLog += "[\(Date().formatted(date: .omitted, time: .standard))] Starting Native ImageIO conversion\n"
+            file.conversionLog += "Input: \(inputPath)\n"
+            file.conversionLog += "Output: \(outputPath)\n"
+            file.conversionLog += "Engine: Apple ImageIO\(isRAW ? " (RAW format detected)" : "")\n\n"
+        }
+        
+        // Capture file weakly for progress handler
+        weak var weakFile = file
+        
+        do {
+            // For RAW files, try LibRaw first for better quality if available
+            if isRAW {
+                if let librawPath = librawPath {
+                    await MainActor.run {
+                        weakFile?.conversionLog += "Using LibRaw for RAW processing...\n"
+                    }
+                    
+                    try await NativeImageConverter.convertWithLibRaw(
+                        inputPath: inputPath,
+                        outputPath: outputPath,
+                        options: file.options.image,
+                        librawPath: librawPath
+                    ) { progress, message in
+                        Task { @MainActor in
+                            weakFile?.progress = progress * 100
+                            weakFile?.conversionLog += "[\(String(format: "%.0f%%", progress * 100))] \(message)\n"
+                        }
+                    }
+                } else {
+                    // Fall back to native ImageIO for RAW (may have reduced quality)
+                    await MainActor.run {
+                        weakFile?.conversionLog += "LibRaw not found, using native ImageIO for RAW...\n"
+                        weakFile?.conversionLog += "Note: Install LibRaw (brew install libraw) for better RAW quality.\n"
+                    }
+                    
+                    try NativeImageConverter.convert(
+                        inputPath: inputPath,
+                        outputPath: outputPath,
+                        options: file.options.image
+                    ) { progress, message in
+                        Task { @MainActor in
+                            weakFile?.progress = progress * 100
+                            weakFile?.conversionLog += "[\(String(format: "%.0f%%", progress * 100))] \(message)\n"
+                        }
+                    }
+                }
+            } else {
+                // Standard image conversion with native ImageIO
+                try NativeImageConverter.convert(
+                    inputPath: inputPath,
+                    outputPath: outputPath,
+                    options: file.options.image
+                ) { progress, message in
+                    Task { @MainActor in
+                        weakFile?.progress = progress * 100
+                        weakFile?.conversionLog += "[\(String(format: "%.0f%%", progress * 100))] \(message)\n"
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                file.conversionLog += "\n[SUCCESS] Native ImageIO conversion completed successfully\n"
+            }
+            
+        } catch let error as NativeConversionError {
+            // Check if we should fall back to ImageMagick
+            let shouldFallback = file.options.image.engine == .auto
+            
+            if shouldFallback, magickPath != nil {
+                await MainActor.run {
+                    file.conversionLog += "\n[WARNING] Native conversion failed: \(error.localizedDescription)\n"
+                    file.conversionLog += "Falling back to ImageMagick...\n\n"
+                }
+                
+                // Fall back to ImageMagick
+                try await convertWithImageMagick(fileId: fileId, inputPath: inputPath, outputPath: outputPath, file: file)
+            } else {
+                await MainActor.run {
+                    file.conversionLog += "\n[ERROR] Native conversion failed: \(error.localizedDescription)\n"
+                }
+                throw ConversionError(message: error.localizedDescription)
             }
         }
     }

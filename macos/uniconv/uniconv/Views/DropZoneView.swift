@@ -19,6 +19,9 @@ struct DropZoneView: View {
     @Namespace private var dropZoneNamespace
     @State private var iconPhase: CGFloat = 0
     
+    // Get default image engine from settings
+    @AppStorage("imageEngine") private var defaultImageEngine = ImageConversionEngine.auto.rawValue
+    
     var body: some View {
         GlassEffectContainer(spacing: 20) {
             VStack(spacing: 16) {
@@ -41,13 +44,8 @@ struct DropZoneView: View {
                         .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
                         .frame(width: 80, height: 80)
                 }
-                .glassEffect(
-                    isTargeted ? .regular.tint(.accentColor).interactive() : .regular.interactive(),
-                    in: .circle
-                )
                 .glassEffectID("dropIcon", in: dropZoneNamespace)
                 .scaleEffect(isTargeted ? 1.15 : 1.0)
-                .rotationEffect(.degrees(isTargeted ? 5 : 0))
                 
                 VStack(spacing: 6) {
                     Text(isTargeted ? "Release to add files" : "Drop files here to convert")
@@ -98,7 +96,6 @@ struct DropZoneView: View {
         }
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
         .shadow(color: isTargeted ? .accentColor.opacity(0.4) : .clear, radius: 30, y: 10)
-        .scaleEffect(isTargeted ? 1.02 : 1.0)
         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isTargeted)
         .focusable(false)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
@@ -116,7 +113,7 @@ struct DropZoneView: View {
         } isTargeted: { targeted in
             isTargeted = targeted
         }
-        .alert("Oops! Unsupported File Type 🙈", isPresented: $showUnsupportedAlert) {
+        .alert("Unsupported File Type :(", isPresented: $showUnsupportedAlert) {
             Button("OK") { }
         } message: {
             Text("We can't convert \(unsupportedFileName) yet.\n\n📝 \"\(unsupportedFileExtension)\" files aren't supported at the moment.\n\n✨ We support: video, audio, and image files like mp4, mp3, png, jpg, and many more!")
@@ -248,7 +245,19 @@ struct DropZoneView: View {
                 selectedFormat: availableFormats[0],
                 availableFormats: availableFormats
             )
+            
+            // Apply default image engine from settings
+            if fileType == .image, let engine = ImageConversionEngine(rawValue: defaultImageEngine) {
+                fileItem.options.image.engine = engine
+            }
+            
             files.append(fileItem)
         }
     }
+}
+
+#Preview {
+    DropZoneView(files: .constant([]))
+        .frame(width: 600, height: 300)
+        .padding()
 }
